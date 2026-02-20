@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "PASTE_YOUR_SUPABASE_CONNECTION_STRING_HERE"
+DATABASE_URL = "postgresql://postgres:[YOUR-PASSWORD]@db.smsfqwxfiswxttzvpxmw.supabase.co:5432/postgres"
 
 engine = create_engine(DATABASE_URL)
 
