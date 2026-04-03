@@ -85,7 +85,7 @@ def store_document_with_embeddings(
 
     return {"duplicate": False, "document_id": doc_id, "chunks": len(chunks)}
 
-def semantic_search(query: str, limit: int = 5, threshold: float = 0.3) -> list[dict]:
+def semantic_search(query: str, limit: int = 5, threshold: float = -1.0) -> list[dict]:
     """Search using pgvector cosine similarity."""
     query_embedding = embed_text(query)
     result = supabase.rpc("match_embeddings", {
@@ -98,7 +98,7 @@ def semantic_search(query: str, limit: int = 5, threshold: float = 0.3) -> list[
 def answer_question(question: str, user_id: str) -> dict:
     """RAG: retrieve context → generate answer with Groq LLaMA."""
     # 1. Retrieve relevant chunks
-    results = semantic_search(question, limit=5)
+    results = semantic_search(question, limit=5, threshold=-1.0)
 
     if not results:
         return {
@@ -129,7 +129,7 @@ Question: {question}
 Provide a clear, structured answer. Cite which documents you used."""
 
     response = get_groq().chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=0.3
