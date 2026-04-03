@@ -115,10 +115,4 @@ devhive/
 | GET | /admin/users | All users (admin) |
 | PATCH | /admin/users/{id}/role | Change role (admin) |
 
-## Team
 
-- 23B81A0532 - P.Nandini Naidu
-- 23B81A0545 - K.Sarayu Reddy  
-- 23B81A0550 - M.Sri Vardhan
-
-CVR College of Engineering — Industry Oriented Mini Project 2026
