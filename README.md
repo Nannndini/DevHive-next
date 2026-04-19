@@ -1,4 +1,4 @@
-\# 🛰️ DevHive: Enterprise Knowledge Discovery \& RAG Platform
+🛰️ DevHive: Enterprise Knowledge Discovery \& RAG Platform
 
 
 
