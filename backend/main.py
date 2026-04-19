@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import engine, SessionLocal
 from models import Base
 from services.ingestion_service import ingestion_service
-from routers import analytics
+from routers import analytics, documents, search
 
 def get_db():
     db = SessionLocal()
@@ -25,6 +25,8 @@ app.add_middleware(
 )
 
 app.include_router(analytics.router)
+app.include_router(documents.router)
+app.include_router(search.router)
 
 # create tables automatically
 Base.metadata.create_all(bind=engine)
