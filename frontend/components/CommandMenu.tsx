@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Command } from 'cmdk'
-import { Search, FileText, Settings, Moon, Sun, Link, Database, Zap } from 'lucide-react'
+import { Search, FileText, Settings, Moon, Link, Database, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function CommandMenu() {

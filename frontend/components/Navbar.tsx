@@ -9,7 +9,6 @@ import { ThemeToggle } from "./ThemeToggle"
 export function Navbar() {
   const pathname = usePathname()
   const [role, setRole] = useState<string | null>(null)
-  const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
