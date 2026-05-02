@@ -1,5 +1,3 @@
-import { LayoutGrid, Activity } from "lucide-react"
-import Link from "next/link"
 import { SearchPanel } from "@/components/SearchPanel"
 import { UploadPanel } from "@/components/UploadPanel"
 import { IntegrationsPanel } from "@/components/IntegrationsPanel"

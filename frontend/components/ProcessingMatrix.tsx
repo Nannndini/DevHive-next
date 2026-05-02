@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Terminal, Activity, CheckCircle, Clock, AlertCircle, Trash2, Loader2 } from "lucide-react"
+import { Activity, Trash2, Loader2 } from "lucide-react"
 
 type ProcessingDoc = {
   id: string

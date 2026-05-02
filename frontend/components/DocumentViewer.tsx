@@ -20,7 +20,6 @@ export function DocumentViewer({ documentId, activeChunkId, onClose }: DocumentV
   const [chunks, setChunks] = useState<Chunk[]>([])
   const [docName, setDocName] = useState("Loading Document...")
   const [loading, setLoading] = useState(true)
-  const [loading, setLoading] = useState(true)
   // Create a ref map to dynamically scroll to the correct chunk
   const chunkRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 

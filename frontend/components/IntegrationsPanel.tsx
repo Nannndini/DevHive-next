@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plug, CheckCircle2, Plus, Server, Key, Globe, Box, Layout, ShieldCheck, Trash2 } from "lucide-react"
+import { Plug, Plus, Key, Globe, Box, Layout, ShieldCheck, Trash2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 type CustomIntegration = {
@@ -18,7 +18,6 @@ export function IntegrationsPanel() {
   const [connections, setConnections] = useState<CustomIntegration[]>([])
   const [isAdding, setIsAdding] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
   // Form State
   const [platformName, setPlatformName] = useState("")
