@@ -34,19 +34,7 @@ Base.metadata.create_all(bind=engine)
 @app.get("/")
 def root():
     return {"message": "DevHive backend running"}
-def require_manager(user=Depends(get_current_user)):
-    if user.get("role") not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Manager access required")
-    return user
 
-@app.get("/manager/team-docs")
-async def manager_team_docs(user=Depends(require_manager)):
-    # Assuming supabase is defined elsewhere or client is injected. Placeholder based on original code.
-    try:
-        docs = supabase.table("documents").select("id, title, source, file_type, created_at, user_id").order("created_at", desc=True).execute()
-        return {"documents": docs.data}
-    except Exception as e:
-        return {"error": str(e), "message": "Supabase client not initialized or missing"}
 
 # Phase 3: Background Tasks implementation
 @app.post("/ingest")
