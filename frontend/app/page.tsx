@@ -5,8 +5,13 @@ import { ProcessingMatrix } from "@/components/ProcessingMatrix"
 import { MotionWrapper } from "@/components/MotionWrapper"
 import { CommandMenu } from "@/components/CommandMenu"
 import { Navbar } from "@/components/Navbar"
+import { cookies } from 'next/headers'
 
 export default function Home() {
+  const cookieStore = cookies()
+  const role = cookieStore.get('role')?.value || 'employee'
+  const isPrivileged = role === 'admin' || role === 'manager'
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
       <CommandMenu />
@@ -33,18 +38,22 @@ export default function Home() {
               <ProcessingMatrix />
             </MotionWrapper>
 
-            <MotionWrapper delay={0.3} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-              <IntegrationsPanel />
-            </MotionWrapper>
+            {isPrivileged && (
+              <MotionWrapper delay={0.3} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                <IntegrationsPanel />
+              </MotionWrapper>
+            )}
             
-            <MotionWrapper delay={0.4} className="border border-border rounded-2xl p-8 text-center bg-muted/5">
-               <h3 className="font-bold text-sm mb-3 uppercase tracking-widest text-muted">Platform Node</h3>
-               <div className="space-y-2 text-xs text-muted font-medium">
-                 <p className="flex justify-between border-b border-border/50 pb-2"><span>Version</span> <span>1.0.4-beta</span></p>
-                 <p className="flex justify-between border-b border-border/50 pb-2"><span>Kernel</span> <span>FastAPI v0.110</span></p>
-                 <p className="flex justify-between"><span>Core AI</span> <span>llama-3-8b-instruct</span></p>
-               </div>
-            </MotionWrapper>
+            {isPrivileged && (
+              <MotionWrapper delay={0.4} className="border border-border rounded-2xl p-8 text-center bg-muted/5">
+                 <h3 className="font-bold text-sm mb-3 uppercase tracking-widest text-muted">Platform Node</h3>
+                 <div className="space-y-2 text-xs text-muted font-medium">
+                   <p className="flex justify-between border-b border-border/50 pb-2"><span>Version</span> <span>1.0.4-beta</span></p>
+                   <p className="flex justify-between border-b border-border/50 pb-2"><span>Kernel</span> <span>FastAPI v0.110</span></p>
+                   <p className="flex justify-between"><span>Core AI</span> <span>llama-3-8b-instruct</span></p>
+                 </div>
+              </MotionWrapper>
+            )}
           </div>
         </div>
       </main>

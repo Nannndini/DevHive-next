@@ -12,8 +12,9 @@ export function Navbar() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Mock profile fetch
-    setRole('admin')
+    const match = document.cookie.match(new RegExp('(^| )role=([^;]+)'))
+    const currentRole = match ? match[2] : 'employee'
+    setRole(currentRole)
     setLoading(false)
   }, [])
   

@@ -23,7 +23,7 @@ export default function Login() {
       if (res.ok) {
         document.cookie = `token=${data.token}; path=/`;
         document.cookie = `role=${data.user.role}; path=/`;
-        router.push("/dashboard");
+        router.push("/");
       } else {
         setError(data.detail || "Login failed");
       }
