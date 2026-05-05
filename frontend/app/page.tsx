@@ -7,8 +7,8 @@ import { CommandMenu } from "@/components/CommandMenu"
 import { Navbar } from "@/components/Navbar"
 import { cookies } from 'next/headers'
 
-export default function Home() {
-  const cookieStore = cookies()
+export default async function Home() {
+  const cookieStore = await cookies()
   const role = cookieStore.get('role')?.value || 'employee'
   const isPrivileged = role === 'admin' || role === 'manager'
 
