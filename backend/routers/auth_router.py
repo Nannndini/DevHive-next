@@ -7,6 +7,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
 # Mock user database
 USERS = {
     "admin@devhive.ai": {"password": "password", "role": "admin", "name": "Admin User"},
@@ -29,5 +34,28 @@ async def login(request: LoginRequest):
             "email": request.email,
             "role": user["role"],
             "name": user["name"]
+        }
+    }
+
+@router.post("/register")
+async def register(request: RegisterRequest):
+    if request.email in USERS:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Add to mock database
+    USERS[request.email] = {
+        "password": request.password,
+        "role": "employee", # Default role
+        "name": request.full_name
+    }
+    
+    token = "mock-jwt-token-employee"
+    
+    return {
+        "token": token,
+        "user": {
+            "email": request.email,
+            "role": "employee",
+            "name": request.full_name
         }
     }
