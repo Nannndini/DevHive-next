@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 password = os.getenv("SUPABASE_PASSWORD")
-DATABASE_URL = f"postgresql://postgres.smsfqwxfiswxttzvpxmw:{password}@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+# Direct connection (bypasses pooler region issues)
+DATABASE_URL = f"postgresql://postgres:{password}@db.smsfqwxfiswxttzvpxmw.supabase.co:5432/postgres"
 
 engine = create_engine(DATABASE_URL)
 
