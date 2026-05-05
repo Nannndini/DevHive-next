@@ -30,9 +30,11 @@ export default async function Home() {
 
           {/* Productivity & Integration Sidebar */}
           <div className="lg:col-span-4 space-y-8 h-[calc(100vh-120px)] overflow-y-auto pr-2">
-            <MotionWrapper delay={0.2} className="bg-card border border-border rounded-2xl p-1 shadow-sm">
-              <UploadPanel />
-            </MotionWrapper>
+            {role === 'admin' && (
+              <MotionWrapper delay={0.2} className="bg-card border border-border rounded-2xl p-1 shadow-sm">
+                <UploadPanel />
+              </MotionWrapper>
+            )}
 
             <MotionWrapper delay={0.25}>
               <ProcessingMatrix />

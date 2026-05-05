@@ -15,6 +15,12 @@ export function ProcessingMatrix() {
   const [docs, setDocs] = useState<ProcessingDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [role, setRole] = useState<string>('employee')
+
+  useEffect(() => {
+    const match = document.cookie.match(new RegExp('(^| )role=([^;]+)'))
+    if (match) setRole(match[2])
+  }, [])
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -103,14 +109,15 @@ export function ProcessingMatrix() {
                     }`}>
                       {doc.status}
                     </div>
-                    
-                    <button 
-                      onClick={(e) => handleDelete(e, doc.id)}
-                      disabled={deletingId === doc.id}
-                      className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 hover:bg-red-500/10 rounded-md text-muted hover:text-red-500"
-                    >
-                      {deletingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Trash2 className="h-3 w-3" />}
-                    </button>
+                    {role === 'admin' && (
+                      <button 
+                        onClick={(e) => handleDelete(e, doc.id)}
+                        disabled={deletingId === doc.id}
+                        className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 hover:bg-red-500/10 rounded-md text-muted hover:text-red-500"
+                      >
+                        {deletingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Trash2 className="h-3 w-3" />}
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )

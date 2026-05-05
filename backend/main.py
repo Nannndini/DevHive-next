@@ -5,6 +5,8 @@ from database import engine, SessionLocal
 from models import Base
 from services.ingestion_service import ingestion_service
 from routers import analytics, documents, search, auth_router
+import io
+import PyPDF2
 
 def get_db():
     db = SessionLocal()
@@ -46,7 +48,17 @@ async def ingest_document(
     Endpoint for uploading documents. Synchronous processing.
     """
     content = await file.read()
-    text_content = content.decode('utf-8', errors='ignore')
+    
+    if file.filename.lower().endswith(".pdf"):
+        try:
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+            text_content = ""
+            for page in pdf_reader.pages:
+                text_content += page.extract_text() + "\n"
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error parsing PDF: {str(e)}")
+    else:
+        text_content = content.decode('utf-8', errors='ignore')
     
     # Process synchronously
     result = await ingestion_service.process_document(
