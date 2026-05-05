@@ -40,8 +40,7 @@ def root():
 @app.post("/ingest")
 async def ingest_document(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    file: UploadFile = File(...)
 ):
     """
     Endpoint for uploading documents. Runs processing via background tasks 
@@ -53,7 +52,6 @@ async def ingest_document(
     # Add to background tasks
     background_tasks.add_task(
         ingestion_service.process_document, 
-        db=db, 
         filename=file.filename, 
         content=text_content
     )

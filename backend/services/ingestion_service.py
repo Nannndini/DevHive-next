@@ -5,6 +5,7 @@ from sqlalchemy import text
 from services.chunking import chunking_service
 from services.embedding_service import embedding_service
 from models import Document
+from database import SessionLocal
 
 class IngestionService:
     """Core pipeline for processing and ingesting documents with deduplication"""
@@ -18,11 +19,12 @@ class IngestionService:
         existing = db.query(Document).filter(Document.title == filename).first()
         return existing is not None
         
-    async def process_document(self, db: Session, filename: str, content: str) -> Dict[str, Any]:
+    async def process_document(self, filename: str, content: str) -> Dict[str, Any]:
         """
         Main pipeline: Check duplicates -> Chunk -> Embed -> Save
         Designed to be run as a FastAPI BackgroundTask.
         """
+        db = SessionLocal()
         try:
             # 1. Exact Filename Deduplication Check
             if await self._check_duplicate_filename(db, filename):
@@ -99,5 +101,7 @@ class IngestionService:
             print(f"Error processing document {filename}: {e}")
             db.rollback()
             return {"status": "error", "reason": str(e), "filename": filename}
+        finally:
+            db.close()
 
 ingestion_service = IngestionService()
