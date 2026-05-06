@@ -4,6 +4,20 @@ import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 
 export default function OverviewDashboard() {
+  const [userRole, setUserRole] = useState<string>("employee");
+
+  useEffect(() => {
+    // Read role from cookie
+    const match = document.cookie.match(new RegExp('(^| )role=([^;]+)'));
+    if (match) setUserRole(match[2]);
+  }, []);
+
+  const users = [
+    { email: "admin@devhive.ai", role: "admin" },
+    { email: "manager@devhive.ai", role: "manager" },
+    { email: "employee@devhive.ai", role: "employee" },
+  ];
+
   const data = {
     stats: {
         total_documents: 14,
@@ -127,6 +141,52 @@ export default function OverviewDashboard() {
             </table>
           </div>
         </div>
+
+        {/* Member Directory */}
+        {(userRole === "admin" || userRole === "manager") && (
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Member Directory
+            </h3>
+            <div className="border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-neutral-50 text-neutral-500 border-b border-neutral-200 text-xs uppercase tracking-widest">
+                  <tr>
+                    <th className="px-6 py-4 font-bold">Identity</th>
+                    <th className="px-6 py-4 font-bold">Clearance Level</th>
+                    <th className="px-6 py-4 font-bold">Protocol Override</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 bg-white">
+                  {users.map((u: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-neutral-800">{u.email}</td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-sm ${
+                          u.role === 'admin' ? 'text-red-600 bg-red-50' :
+                          u.role === 'manager' ? 'text-blue-600 bg-blue-50' :
+                          'text-neutral-500 bg-neutral-100'
+                        }`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold uppercase tracking-widest">
+                        {userRole === "admin" ? (
+                          <div className="flex gap-2">
+                            {u.role !== 'admin' && <button className="text-blue-600 hover:text-blue-800">Promote</button>}
+                            {u.role !== 'employee' && <button className="text-red-600 hover:text-red-800">Demote</button>}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400">Read Only</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

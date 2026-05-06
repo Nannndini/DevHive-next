@@ -49,7 +49,7 @@ class IngestionService:
             db.execute(text("""
                 CREATE TABLE IF NOT EXISTS document_chunks (
                     id SERIAL PRIMARY KEY,
-                    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
                     chunk_index INTEGER,
                     content TEXT,
                     embedding vector(384) -- BAAI/bge-small-en-v1.5 outputs 384d

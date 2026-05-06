@@ -4,10 +4,15 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
   
+  // Debug logs
+  console.log("Middleware executing for path:", request.nextUrl.pathname);
+  console.log("Middleware token found:", token);
+  
   // Define paths that don't require authentication
   const isPublicPath = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register';
   
   if (!token && !isPublicPath) {
+    console.log("Redirecting unauthenticated user to /login");
     return NextResponse.redirect(new URL('/login', request.url));
   }
   

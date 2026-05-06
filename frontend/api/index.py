@@ -33,19 +33,7 @@ app.include_router(documents.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(auth_router.router, prefix="/api")
 
-# create tables automatically
-Base.metadata.create_all(bind=engine)
-from sqlalchemy import text
-with engine.begin() as conn:
-    conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS document_chunks (
-            id SERIAL PRIMARY KEY,
-            document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-            chunk_index INTEGER,
-            content TEXT,
-            embedding vector(384)
-        )
-    """))
+# tables are now created dynamically inside services to prevent serverless cold-start blocking
 
 @app.get("/api")
 def root():
