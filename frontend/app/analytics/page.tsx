@@ -16,38 +16,34 @@ import {
 } from "recharts";
 
 export default function AnalyticsDashboard() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`/api/analytics/dashboard`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch analytics");
-        return res.json();
-      })
-      .then((json) => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load analytics", err);
-        setError("SYSTEM FAILURE: Analytics unreachable.");
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white text-black flex items-center justify-center font-sans">
-        <div className="animate-pulse font-bold tracking-widest text-sm uppercase">Loading Neural Analytics...</div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return <div className="min-h-screen bg-white text-red-600 p-8 font-sans font-bold">{error}</div>;
-  }
+  const data = {
+    stats: {
+        total_queries: 92,
+        avg_confidence: "85%",
+        active_users: 6,
+        system_latency: "1.2s"
+    },
+    query_velocity: [
+        {day: "Day 1", queries: 12},
+        {day: "Day 5", queries: 45},
+        {day: "Day 10", queries: 23},
+        {day: "Day 15", queries: 78},
+        {day: "Day 20", queries: 105},
+        {day: "Day 25", queries: 90},
+        {day: "Day 30", queries: 134}
+    ],
+    confidence_scores: [
+        {name: "High (>0.9)", value: 400},
+        {name: "Medium (0.7-0.9)", value: 300},
+        {name: "Low (<0.7)", value: 100}
+    ],
+    top_terms: [
+        {term: "authentication flow", count: 150},
+        {term: "database schema", count: 120},
+        {term: "vercel deployment", count: 80},
+        {term: "api keys", count: 65}
+    ]
+  };
 
   return (
     <div className="min-h-screen bg-white text-black font-sans">

@@ -38,12 +38,9 @@ Base.metadata.create_all(bind=engine)
 from sqlalchemy import text
 with engine.begin() as conn:
     conn.execute(text("""
-        CREATE EXTENSION IF NOT EXISTS vector;
-    """))
-    conn.execute(text("""
         CREATE TABLE IF NOT EXISTS document_chunks (
             id SERIAL PRIMARY KEY,
-            document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+            document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
             chunk_index INTEGER,
             content TEXT,
             embedding vector(384)

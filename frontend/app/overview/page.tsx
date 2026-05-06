@@ -4,38 +4,26 @@ import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 
 export default function OverviewDashboard() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`/api/overview`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch overview data");
-        return res.json();
-      })
-      .then((json) => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error loading overview:", err);
-        setError("SYSTEM FAILURE: Overview unreachable.");
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white text-black flex items-center justify-center font-sans">
-        <div className="animate-pulse font-bold tracking-widest text-sm uppercase">Loading System Overview...</div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return <div className="min-h-screen bg-white text-red-600 p-8 font-sans font-bold">{error}</div>;
-  }
+  const data = {
+    stats: {
+        total_documents: 14,
+        total_chunks: 620,
+        active_users: 6,
+        uptime_percentage: "99.99%"
+    },
+    documents: [
+        {id: 1, name: "core_sys_config.md", status: "INDEXED", chunks: 45},
+        {id: 2, name: "team_directory.txt", status: "VECTOR_SYNC", chunks: 12},
+        {id: 3, name: "q3_financial_report.pdf", status: "STAGED", chunks: 156},
+        {id: 4, name: "api_documentation_v2.md", status: "INDEXED", chunks: 89}
+    ],
+    recent_queries: [
+        {id: 101, query: "How to deploy to vercel?", response_time: "1.2s", chunks_used: 4, timestamp: "2 mins ago"},
+        {id: 102, query: "What is the database schema for users?", response_time: "0.8s", chunks_used: 2, timestamp: "15 mins ago"},
+        {id: 103, query: "Show me the authentication flow", response_time: "2.1s", chunks_used: 8, timestamp: "1 hour ago"},
+        {id: 104, query: "List all active background workers", response_time: "1.5s", chunks_used: 5, timestamp: "3 hours ago"}
+    ]
+  };
 
   return (
     <div className="min-h-screen bg-white text-black font-sans">

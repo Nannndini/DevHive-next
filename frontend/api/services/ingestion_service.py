@@ -15,8 +15,8 @@ class IngestionService:
         
     async def _check_duplicate_filename(self, db: Session, filename: str) -> bool:
         """Check if a file with this exact name already exists in the DB"""
-        # Based on current models.Document containing 'title'
-        existing = db.query(Document).filter(Document.title == filename).first()
+        # Based on current models.Document containing 'filename'
+        existing = db.query(Document).filter(Document.filename == filename).first()
         return existing is not None
         
     async def process_document(self, filename: str, content: str) -> Dict[str, Any]:
@@ -39,7 +39,8 @@ class IngestionService:
             embeddings = await embedding_service.batch_generate_embeddings(chunks)
             
             # 4. Save parent Document to Database
-            new_doc = Document(title=filename, content=content)
+            file_type = "pdf" if filename.lower().endswith(".pdf") else "txt"
+            new_doc = Document(title=filename, filename=filename, file_type=file_type, content=content)
             db.add(new_doc)
             db.commit()
             db.refresh(new_doc)
