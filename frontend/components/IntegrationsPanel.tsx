@@ -73,8 +73,7 @@ export function IntegrationsPanel() {
     if (!confirm("Are you sure you want to remove this connection? This will stop all synchronization.")) return
     
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000"
-      const response = await fetch(`${backendUrl}/integrations/${integrationId}`, {
+      const response = await fetch(`/api/integrations/${integrationId}`, {
         method: 'DELETE'
       })
 
@@ -93,8 +92,7 @@ export function IntegrationsPanel() {
   const handleSync = async (integrationId: string) => {
     setSyncingId(integrationId)
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000"
-      const response = await fetch(`${backendUrl}/integrations/${integrationId}/sync`, {
+      const response = await fetch(`/api/integrations/${integrationId}/sync`, {
         method: 'POST'
       })
       

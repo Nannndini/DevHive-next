@@ -43,8 +43,7 @@ export function SearchPanel() {
     setActiveDocId(null) // Reset split view on new search
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000"
-      const res = await fetch(`${backendUrl}/search`, {
+      const res = await fetch(`/api/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

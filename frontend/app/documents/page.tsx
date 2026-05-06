@@ -6,7 +6,7 @@ export default function Documents() {
   const [docs, setDocs] = useState([]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/documents`)
+    fetch(`/api/documents`)
       .then(res => res.json())
       .then(data => setDocs(data.documents || []))
       .catch(console.error);

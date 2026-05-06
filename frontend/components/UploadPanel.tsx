@@ -30,9 +30,8 @@ export function UploadPanel() {
       formData.append("file", file)
       formData.append("is_private", isPrivate.toString())
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000"
       // Note: We use query params for boolean/simple flags to match FastAPI's easier handling of non-file fields in some setups
-      const res = await fetch(`${backendUrl}/ingest?is_private=${isPrivate}`, {
+      const res = await fetch(`/api/ingest?is_private=${isPrivate}`, {
         method: "POST",
         body: formData
       })

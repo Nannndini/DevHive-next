@@ -21,8 +21,7 @@ export default function AnalyticsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-    fetch(`${backendUrl}/analytics/dashboard`)
+    fetch(`/api/analytics/dashboard`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch analytics");
         return res.json();

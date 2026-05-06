@@ -9,8 +9,7 @@ export default function OverviewDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-    fetch(`${backendUrl}/analytics/overview`)
+    fetch(`/api/analytics/overview`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch overview data");
         return res.json();
