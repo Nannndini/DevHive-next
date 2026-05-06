@@ -101,14 +101,14 @@ export default function Login() {
             <button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-[#EBF0FA] text-[#0033a0] p-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-white transition-colors disabled:opacity-50"
+              className="w-full bg-black text-white p-4 font-bold uppercase tracking-widest text-sm hover:bg-neutral-900 transition-colors border border-black disabled:opacity-50"
             >
               {isLoading ? "Authenticating..." : "Authenticate"}
             </button>
             <button 
               type="button" 
               onClick={() => router.push('/register')} 
-              className="w-full bg-black text-white p-4 rounded border border-neutral-800 font-bold uppercase tracking-widest text-sm hover:bg-neutral-900 transition-colors"
+              className="w-full bg-transparent text-white p-4 border border-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-colors"
             >
               Request Access
             </button>

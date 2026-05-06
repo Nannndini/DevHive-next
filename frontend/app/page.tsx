@@ -36,7 +36,12 @@ export default async function Home() {
                 <IntegrationsPanel />
               </MotionWrapper>
             
-              <MotionWrapper delay={0.4} className="border border-border rounded-2xl p-8 text-center bg-muted/5">
+              <MotionWrapper delay={0.4} className="border border-border rounded-2xl p-8 text-center bg-muted/5 relative overflow-hidden">
+                 <div className="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                 <div className="flex items-center justify-center gap-2 mb-6 bg-green-500/10 text-green-500 py-1.5 px-3 rounded-full w-max mx-auto border border-green-500/20">
+                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                   <span className="text-[10px] font-black tracking-widest uppercase">CORE INGESTION ONLINE</span>
+                 </div>
                  <h3 className="font-bold text-sm mb-3 uppercase tracking-widest text-muted">Platform Node</h3>
                  <div className="space-y-2 text-xs text-muted font-medium">
                    <p className="flex justify-between border-b border-border/50 pb-2"><span>Version</span> <span>1.0.4-beta</span></p>
