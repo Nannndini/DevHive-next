@@ -1,127 +1,146 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, FileText, CheckCircle, AlertTriangle, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Navbar } from "@/components/Navbar";
 
-export default function AdminIngestion() {
-  const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
+export default function OverviewDashboard() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-      setStatus("idle");
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setStatus("uploading");
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch("http://127.0.0.1:8000/ingest", {
-        method: "POST",
-        body: formData,
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+    fetch(`${backendUrl}/analytics/overview`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch overview data");
+        return res.json();
+      })
+      .then((json) => {
+        setData(json);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading overview:", err);
+        setError("SYSTEM FAILURE: Overview unreachable.");
+        setLoading(false);
       });
+  }, []);
 
-      const data = await res.json();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white text-black flex items-center justify-center font-sans">
+        <div className="animate-pulse font-bold tracking-widest text-sm uppercase">Loading System Overview...</div>
+      </div>
+    );
+  }
 
-      if (res.ok) {
-        setStatus("success");
-        setMessage(data.message || "File dispatched for neural processing.");
-      } else {
-        setStatus("error");
-        setMessage(data.detail || "Ingestion pipeline failure.");
-      }
-    } catch (err) {
-      setStatus("error");
-      setMessage("Network connection severed. Check backend status.");
-    }
-  };
+  if (error || !data) {
+    return <div className="min-h-screen bg-white text-red-600 p-8 font-sans font-bold">{error}</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8 font-mono relative overflow-hidden">
-      {/* Background FX */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-900/20 via-black to-black z-0 pointer-events-none" />
-
-      <div className="relative z-10 max-w-4xl mx-auto space-y-12 mt-12">
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="border-l-4 border-cyan-400 pl-6 py-2"
-        >
-          <h1 className="text-4xl font-black tracking-tighter uppercase text-white">
-            Data Ingestion <span className="text-cyan-400">Terminal</span>
+    <div className="min-h-screen bg-white text-black font-sans">
+      <Navbar />
+      
+      <main className="max-w-7xl mx-auto px-6 py-10 space-y-12">
+        <header className="border-b border-neutral-200 pb-4">
+          <h1 className="text-3xl font-black tracking-tight uppercase">
+            System Overview
           </h1>
-          <p className="text-cyan-600/80 mt-2 text-sm max-w-lg">
-            Upload raw unstructured data. Background workers will chunk, embed, and map the context into the neural vector space.
+          <p className="text-neutral-500 text-xs font-bold tracking-widest uppercase mt-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+            Neural Architecture Status | Build 1.0.4
           </p>
-        </motion.header>
+        </header>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gray-900/40 backdrop-blur-md border border-cyan-900/50 p-10 rounded-xl relative overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-cyan-900/50 rounded-lg p-12 bg-black/50 hover:bg-cyan-950/10 transition-colors relative z-10">
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            {file ? (
-              <div className="flex flex-col items-center text-cyan-400">
-                <FileText size={48} className="mb-4" />
-                <p className="text-lg font-bold">{file.name}</p>
-                <p className="text-sm text-cyan-700 mt-1">{(file.size / 1024).toFixed(2)} KB</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center text-cyan-700 group-hover:text-cyan-500 transition-colors">
-                <Upload size={48} className="mb-4" />
-                <p className="text-lg font-bold">DRAG & DROP SECURE FILES</p>
-                <p className="text-sm mt-1">or click to browse local directory</p>
-              </div>
-            )}
+        {/* 4 Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="border border-neutral-200 p-6 rounded-xl flex flex-col gap-2 shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total Documents</span>
+            <span className="text-4xl font-black">{data.stats.total_documents}</span>
           </div>
-
-          <div className="mt-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {status === "success" && (
-                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-green-400 bg-green-400/10 px-4 py-2 rounded border border-green-400/20">
-                  <CheckCircle size={18} /> {message}
-                </motion.div>
-              )}
-              {status === "error" && (
-                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-2 rounded border border-red-400/20">
-                  <AlertTriangle size={18} /> {message}
-                </motion.div>
-              )}
-              {status === "uploading" && (
-                <div className="flex items-center gap-2 text-cyan-400">
-                  <Zap size={18} className="animate-pulse" /> Initiating background sequence...
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleUpload}
-              disabled={!file || status === "uploading"}
-              className="relative px-8 py-3 bg-cyan-950 text-cyan-400 font-bold uppercase tracking-widest border border-cyan-500 hover:bg-cyan-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-cyan-400 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-0" />
-              <span className="relative z-10">{status === "uploading" ? "PROCESSING..." : "INITIALIZE UPLOAD"}</span>
-            </button>
+          <div className="border border-neutral-200 p-6 rounded-xl flex flex-col gap-2 shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Vector Embeddings</span>
+            <span className="text-4xl font-black">{data.stats.total_chunks}</span>
           </div>
-        </motion.div>
-      </div>
+          <div className="border border-neutral-200 p-6 rounded-xl flex flex-col gap-2 shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Active Connections</span>
+            <span className="text-4xl font-black">{data.stats.active_users}</span>
+          </div>
+          <div className="border border-neutral-200 p-6 rounded-xl flex flex-col gap-2 shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">System Uptime</span>
+            <span className="text-4xl font-black text-green-500">{data.stats.uptime_percentage}</span>
+          </div>
+        </div>
+
+        {/* Documents Table */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Node Library
+          </h3>
+          <div className="border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-neutral-50 text-neutral-500 border-b border-neutral-200 text-xs uppercase tracking-widest">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Entry</th>
+                  <th className="px-6 py-4 font-bold">Status</th>
+                  <th className="px-6 py-4 font-bold">Chunks</th>
+                  <th className="px-6 py-4 font-bold">Protocol</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 bg-white">
+                {data.documents.map((doc: any) => (
+                  <tr key={doc.id} className="hover:bg-neutral-50 transition-colors">
+                    <td className="px-6 py-4 font-medium">{doc.name}</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-sm ${
+                        doc.status === 'INDEXED' ? 'text-green-600 bg-green-50' :
+                        doc.status === 'VECTOR_SYNC' ? 'text-blue-600 bg-blue-50' :
+                        'text-neutral-500 bg-neutral-100'
+                      }`}>
+                        {doc.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600 font-mono text-xs">{doc.chunks}</td>
+                    <td className="px-6 py-4">
+                      <span className="text-blue-600 hover:text-blue-800 cursor-pointer font-bold text-xs uppercase tracking-widest">Inspect Node</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Global Logs Table (Recent Queries) */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Global Logs
+          </h3>
+          <div className="border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-neutral-50 text-neutral-500 border-b border-neutral-200 text-xs uppercase tracking-widest">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Query Log</th>
+                  <th className="px-6 py-4 font-bold">Latency</th>
+                  <th className="px-6 py-4 font-bold">Context Chunks</th>
+                  <th className="px-6 py-4 font-bold">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 bg-white">
+                {data.recent_queries.map((query: any) => (
+                  <tr key={query.id} className="hover:bg-neutral-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-neutral-800">{query.query}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-neutral-500">{query.response_time}</td>
+                    <td className="px-6 py-4 text-neutral-600 font-mono text-xs">{query.chunks_used}</td>
+                    <td className="px-6 py-4 text-neutral-400 text-xs">{query.timestamp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

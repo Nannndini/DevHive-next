@@ -70,4 +70,4 @@ async def ingest_document(
         "message": "Document processed successfully.",
         "filename": file.filename,
         "result": result
-    }
+    } 
