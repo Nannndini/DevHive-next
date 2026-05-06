@@ -26,21 +26,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(analytics.router)
-app.include_router(documents.router)
-app.include_router(search.router)
-app.include_router(auth_router.router)
+app.include_router(analytics.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
+app.include_router(search.router, prefix="/api")
+app.include_router(auth_router.router, prefix="/api")
 
 # create tables automatically
 Base.metadata.create_all(bind=engine)
 
-@app.get("/")
+@app.get("/api")
 def root():
     return {"message": "DevHive backend running"}
 
+@app.get("/api/overview")
+async def root_overview():
+    from routers.analytics import get_system_overview
+    return await get_system_overview()
 
 # Phase 3: Background Tasks implementation
-@app.post("/ingest")
+@app.post("/api/ingest")
 async def ingest_document(
     file: UploadFile = File(...)
 ):

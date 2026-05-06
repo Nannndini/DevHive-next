@@ -14,9 +14,9 @@ class RegisterRequest(BaseModel):
 
 # Mock user database
 USERS = {
-    "admin@devhive.ai": {"password": "password", "role": "admin", "name": "Admin User"},
-    "manager@devhive.ai": {"password": "password", "role": "manager", "name": "Manager User"},
-    "employee@devhive.ai": {"password": "password", "role": "employee", "name": "Employee User"},
+    "admin@devhive.ai": {"password": "admin123", "role": "admin", "name": "Admin User"},
+    "manager@devhive.ai": {"password": "man@123", "role": "manager", "name": "Manager User"},
+    "employee@devhive.ai": {"password": "emp@123", "role": "employee", "name": "Employee User"},
 }
 
 @router.post("/login")

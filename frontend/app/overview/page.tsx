@@ -9,7 +9,7 @@ export default function OverviewDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/analytics/overview`)
+    fetch(`/api/overview`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch overview data");
         return res.json();
