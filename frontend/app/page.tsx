@@ -5,13 +5,7 @@ import { ProcessingMatrix } from "@/components/ProcessingMatrix"
 import { MotionWrapper } from "@/components/MotionWrapper"
 import { CommandMenu } from "@/components/CommandMenu"
 import { Navbar } from "@/components/Navbar"
-import { cookies } from 'next/headers'
-
 export default async function Home() {
-  const cookieStore = await cookies()
-  const role = cookieStore.get('role')?.value || 'employee'
-  const isPrivileged = role === 'admin' || role === 'manager'
-
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
       <CommandMenu />
@@ -30,23 +24,18 @@ export default async function Home() {
 
           {/* Productivity & Integration Sidebar */}
           <div className="lg:col-span-4 space-y-8 h-[calc(100vh-120px)] overflow-y-auto pr-2">
-            {role === 'admin' && (
               <MotionWrapper delay={0.2} className="bg-card border border-border rounded-2xl p-1 shadow-sm">
                 <UploadPanel />
               </MotionWrapper>
-            )}
 
             <MotionWrapper delay={0.25}>
               <ProcessingMatrix />
             </MotionWrapper>
 
-            {isPrivileged && (
               <MotionWrapper delay={0.3} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
                 <IntegrationsPanel />
               </MotionWrapper>
-            )}
             
-            {isPrivileged && (
               <MotionWrapper delay={0.4} className="border border-border rounded-2xl p-8 text-center bg-muted/5">
                  <h3 className="font-bold text-sm mb-3 uppercase tracking-widest text-muted">Platform Node</h3>
                  <div className="space-y-2 text-xs text-muted font-medium">
@@ -55,7 +44,6 @@ export default async function Home() {
                    <p className="flex justify-between"><span>Core AI</span> <span>llama-3-8b-instruct</span></p>
                  </div>
               </MotionWrapper>
-            )}
           </div>
         </div>
       </main>
