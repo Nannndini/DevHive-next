@@ -44,23 +44,39 @@ export function IntegrationsPanel() {
           ? 'github' 
           : 'rest'
 
+      const res = await fetch('/api/integrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform_name: platformName,
+          base_url: baseUrl,
+          api_token: apiKey,
+          platform_type: platformType
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create integration');
+      }
+
+      const data = await res.json();
       const newConnection = {
-        id: Math.random().toString(),
+        id: data.id || Math.random().toString(),
         platform_name: platformName,
         base_url: baseUrl,
         api_token: apiKey,
         platform_type: platformType,
         status: 'active'
-      }
+      };
 
-      setTimeout(() => {
-        setConnections(prev => [newConnection, ...prev])
-        setPlatformName("")
-        setBaseUrl("")
-        setApiKey("")
-        setIsAdding(false)
-        setIsSubmitting(false)
-      }, 500)
+      setConnections(prev => [newConnection, ...prev])
+      setPlatformName("")
+      setBaseUrl("")
+      setApiKey("")
+      setIsAdding(false)
+      setIsSubmitting(false)
     } catch (err: any) {
       console.error("Failed to insert integration:", err)
       alert(`Connection failed: ${err.message || "Unknown error"}`)
@@ -91,9 +107,16 @@ export function IntegrationsPanel() {
 
   const handleSync = async (integrationId: string) => {
     setSyncingId(integrationId)
+    const conn = connections.find(c => c.id === integrationId)
+    if (!conn) return;
+
     try {
       const response = await fetch(`/api/integrations/${integrationId}/sync`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(conn)
       })
       
       if (!response.ok) {

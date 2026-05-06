@@ -27,7 +27,7 @@ export default function Login() {
       const data = await res.json();
       
       if (res.ok) {
-        document.cookie = `token=${data.token}; path=/`;
+        document.cookie = `auth-token=${data.token}; path=/`;
         document.cookie = `role=${data?.user?.role || 'admin'}; path=/`;
         router.push("/");
       } else {
@@ -37,14 +37,14 @@ export default function Login() {
     } catch (err: any) {
       // Fallback for Vercel deployments where backend isn't reachable
       console.warn("Backend unreachable, falling back to local mock authentication!");
-      document.cookie = `token=mock-fallback-token; path=/`;
+      document.cookie = `auth-token=mock-fallback-token; path=/`;
       
       // Determine role based on email input for testing
       let mockRole = 'employee';
       if (email.includes('admin')) mockRole = 'admin';
       if (email.includes('manager')) mockRole = 'manager';
       
-      document.cookie = `role=${mockRole}; path=/; max-age=86400; SameSite=Lax;`;
+      document.cookie = `role=${mockRole}; path=/`;
       
       setIsLoading(false);
       window.location.href = "/";
