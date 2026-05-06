@@ -35,6 +35,20 @@ app.include_router(auth_router.router, prefix="/api")
 
 # create tables automatically
 Base.metadata.create_all(bind=engine)
+from sqlalchemy import text
+with engine.begin() as conn:
+    conn.execute(text("""
+        CREATE EXTENSION IF NOT EXISTS vector;
+    """))
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS document_chunks (
+            id SERIAL PRIMARY KEY,
+            document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+            chunk_index INTEGER,
+            content TEXT,
+            embedding vector(384)
+        )
+    """))
 
 @app.get("/api")
 def root():

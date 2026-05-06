@@ -67,7 +67,7 @@ class IngestionService:
                 # similarity = 1 - distance. So similarity > 0.95 is distance < 0.05
                 duplicate_check_query = text("""
                     SELECT id FROM document_chunks 
-                    WHERE embedding <=> :embedding::vector < 0.05
+                    WHERE embedding <=> CAST(:embedding AS vector) < 0.05
                     LIMIT 1
                 """)
                 
@@ -77,7 +77,7 @@ class IngestionService:
                     # Save unique chunk
                     insert_query = text("""
                         INSERT INTO document_chunks (document_id, chunk_index, content, embedding)
-                        VALUES (:doc_id, :idx, :content, :embedding::vector)
+                        VALUES (:doc_id, :idx, :content, CAST(:embedding AS vector))
                     """)
                     db.execute(insert_query, {
                         "doc_id": new_doc.id,

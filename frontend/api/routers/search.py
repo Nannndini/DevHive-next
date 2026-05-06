@@ -46,10 +46,10 @@ async def search_documents(request: SearchQuery, db: Session = Depends(get_db)):
         
         # 2. Perform pgvector similarity search
         search_query = text("""
-            SELECT c.id as chunk_id, c.content, c.chunk_index, d.title, d.id as doc_id, 1 - (c.embedding <=> :embedding::vector) as similarity
+            SELECT c.id as chunk_id, c.content, c.chunk_index, d.title, d.id as doc_id, 1 - (c.embedding <=> CAST(:embedding AS vector)) as similarity
             FROM document_chunks c
             JOIN documents d ON c.document_id = d.id
-            ORDER BY c.embedding <=> :embedding::vector ASC
+            ORDER BY c.embedding <=> CAST(:embedding AS vector) ASC
             LIMIT :top_k
         """)
         
