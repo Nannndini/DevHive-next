@@ -8,6 +8,7 @@ from api.routers import analytics, documents, search, auth_router
 import io
 import PyPDF2
 from typing import Optional
+import requests
 
 def get_db():
     db = SessionLocal()
@@ -79,8 +80,6 @@ async def ingest_document(
     }
 
 # 4. Integrations
-import requests
-
 @app.post("/api/integrations")
 async def create_integration(data: dict):
     return {"message": "Integration created successfully", "id": data.get("id", "int_" + str(hash(data.get("platform_name"))))}
@@ -97,13 +96,11 @@ async def sync_integration(id: str, data: dict):
     
     try:
         if platform == "notion":
-            # Fetch pages from Notion using the Notion API
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Notion-Version": "2022-06-28",
                 "Content-Type": "application/json"
             }
-            # Search for all pages
             response = requests.post("https://api.notion.com/v1/search", headers=headers, json={"filter": {"value": "page", "property": "object"}})
             
             if not response.ok:
@@ -111,13 +108,10 @@ async def sync_integration(id: str, data: dict):
                 
             results = response.json().get("results", [])
             for page in results:
-                # Extract basic text content from title
                 page_id = page["id"]
                 title_prop = page.get("properties", {}).get("title", {}).get("title", [])
                 title = title_prop[0]["plain_text"] if title_prop else f"Notion Page {page_id}"
                 
-                # We could fetch blocks here, but for simplicity we'll just index the title and page ID for now
-                # In a full implementation, you would fetch the page blocks and extract text
                 text_content = f"Notion Page: {title}\nID: {page_id}\nURL: {page.get('url', '')}"
                 
                 await ingestion_service.process_document(
@@ -127,12 +121,10 @@ async def sync_integration(id: str, data: dict):
                 pages_indexed += 1
                 
         elif platform == "github":
-            # Fetch repos or gists from GitHub
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/vnd.github.v3+json"
             }
-            # Just fetching user repos as a mock sync
             response = requests.get("https://api.github.com/user/repos", headers=headers)
             
             if not response.ok:
