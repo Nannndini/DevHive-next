@@ -1,6 +1,7 @@
-from sqlalchemy import Column, String, Text
+from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+from datetime import datetime
 from api.database import Base
 
 class Document(Base):
@@ -11,3 +12,5 @@ class Document(Base):
     filename = Column(String, nullable=False)
     file_type = Column(String, nullable=False, default="txt")
     content = Column(Text)
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)

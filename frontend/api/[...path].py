@@ -3,12 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from api.database import engine, SessionLocal
 from api.models import Base
-from api.services.ingestion_service import ingestion_service
-from api.routers import analytics, documents, search, auth_router
+from api.routers import analytics, documents, search, auth_router, integrations
+from api.models import Document
 import io
 import PyPDF2
 from typing import Optional
-import requests
 
 def get_db():
     db = SessionLocal()
@@ -32,20 +31,9 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(auth_router.router, prefix="/api")
+app.include_router(integrations.router, prefix="/api")
 
-# create tables automatically
-Base.metadata.create_all(bind=engine)
-from sqlalchemy import text
-with engine.begin() as conn:
-    conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS document_chunks (
-            id SERIAL PRIMARY KEY,
-            document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-            chunk_index INTEGER,
-            content TEXT,
-            embedding vector(384)
-        )
-    """))
+# tables are now created dynamically inside services to prevent serverless cold-start blocking
 
 @app.get("/api")
 def root():
@@ -59,11 +47,12 @@ async def root_overview():
 # Phase 3: Background Tasks implementation
 @app.post("/api/ingest")
 async def ingest_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     is_private: Optional[bool] = Form(False)
 ):
     """
-    Endpoint for uploading documents. Synchronous processing.
+    Endpoint for uploading documents. Asynchronous background processing.
     """
     content = await file.read()
     
@@ -78,81 +67,47 @@ async def ingest_document(
     else:
         text_content = content.decode('utf-8', errors='ignore')
     
-    # Process synchronously
-    result = await ingestion_service.process_document(
-        filename=file.filename, 
-        content=text_content
+    # Check exact duplicate filename synchronously
+    db = SessionLocal()
+    try:
+        if await ingestion_service._check_duplicate_filename(db, file.filename):
+            # Keep frontend compatible status return
+            return {
+                "status": "duplicate",
+                "message": f"Document '{file.filename}' already exists.",
+                "filename": file.filename
+            }
+            
+        # Create parent Document in database with status "processing"
+        file_type = "pdf" if file.filename.lower().endswith(".pdf") else "txt"
+        new_doc = Document(
+            title=file.filename,
+            filename=file.filename,
+            file_type=file_type,
+            content=text_content,
+            status="processing"
+        )
+        db.add(new_doc)
+        db.commit()
+        db.refresh(new_doc)
+        doc_id = new_doc.id
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error during document initialization: {str(e)}")
+    finally:
+        db.close()
+        
+    # Kick off processing in the background
+    background_tasks.add_task(
+        ingestion_service.process_document_async,
+        doc_id,
+        file.filename,
+        text_content
     )
     
     return {
-        "message": "Document processed successfully.",
+        "status": "processing",
+        "document_id": str(doc_id),
         "filename": file.filename,
-        "result": result
+        "message": "Document ingestion queued for background processing."
     }
-
-# 4. Integrations
-@app.post("/api/integrations")
-async def create_integration(data: dict):
-    return {"message": "Integration created successfully", "id": data.get("id", "int_" + str(hash(data.get("platform_name"))))}
-
-@app.post("/api/integrations/{id}/sync")
-async def sync_integration(id: str, data: dict):
-    platform = data.get("platform_type", "").lower()
-    token = data.get("api_token", "")
-    
-    if not token:
-        raise HTTPException(status_code=400, detail="API Token is required for synchronization")
-        
-    pages_indexed = 0
-    
-    try:
-        if platform == "notion":
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Notion-Version": "2022-06-28",
-                "Content-Type": "application/json"
-            }
-            response = requests.post("https://api.notion.com/v1/search", headers=headers, json={"filter": {"value": "page", "property": "object"}})
-            
-            if not response.ok:
-                raise HTTPException(status_code=response.status_code, detail=f"Notion API error: {response.text}")
-                
-            results = response.json().get("results", [])
-            for page in results:
-                page_id = page["id"]
-                title_prop = page.get("properties", {}).get("title", {}).get("title", [])
-                title = title_prop[0]["plain_text"] if title_prop else f"Notion Page {page_id}"
-                
-                text_content = f"Notion Page: {title}\nID: {page_id}\nURL: {page.get('url', '')}"
-                
-                await ingestion_service.process_document(
-                    filename=f"notion_{page_id}.txt",
-                    content=text_content
-                )
-                pages_indexed += 1
-                
-        elif platform == "github":
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-            response = requests.get("https://api.github.com/user/repos", headers=headers)
-            
-            if not response.ok:
-                raise HTTPException(status_code=response.status_code, detail=f"GitHub API error: {response.text}")
-                
-            repos = response.json()
-            for repo in repos:
-                text_content = f"GitHub Repository: {repo.get('name')}\nDescription: {repo.get('description', '')}\nURL: {repo.get('html_url')}"
-                await ingestion_service.process_document(
-                    filename=f"github_{repo.get('name')}.txt",
-                    content=text_content
-                )
-                pages_indexed += 1
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
-    return {"message": f"Integration {id} synced successfully", "pages_indexed": pages_indexed}

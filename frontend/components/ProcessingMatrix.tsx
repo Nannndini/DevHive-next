@@ -43,14 +43,25 @@ export function ProcessingMatrix() {
   }
 
   const fetchStatus = async () => {
-    // Mock data for immediate simulation without backend or Supabase
-    const mockData = [
-      { id: "mock-1", filename: "system_init.log", status: "completed", created_at: new Date(Date.now() - 5000).toISOString() },
-      { id: "mock-2", filename: "neural_weights.bin", status: "completed", created_at: new Date(Date.now() - 15000).toISOString() },
-      { id: "mock-3", filename: "vector_index.db", status: "processing", created_at: new Date().toISOString() }
-    ];
-    setDocs(mockData);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/documents")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.documents) {
+          const formatted = data.documents.map((d: any) => ({
+            id: d.id,
+            filename: d.filename || d.title || "unnamed_node",
+            status: d.status === "complete" ? "completed" : d.status || "completed",
+            created_at: d.created_at || new Date().toISOString()
+          }))
+          setDocs(formatted)
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching status from backend:", err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

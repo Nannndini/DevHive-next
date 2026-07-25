@@ -19,10 +19,86 @@ class IngestionService:
         existing = db.query(Document).filter(Document.title == filename).first()
         return existing is not None
         
+    async def process_document_async(self, doc_id: Any, filename: str, content: str) -> None:
+        """
+        Asynchronously chunk, embed, and index document. Updates status to complete or failed.
+        Designed to be run as a FastAPI BackgroundTask.
+        """
+        db = SessionLocal()
+        try:
+            # 1. Chunking
+            chunks = chunking_service.chunk_text(content)
+            if not chunks:
+                doc = db.query(Document).filter(Document.id == doc_id).first()
+                if doc:
+                    doc.status = "failed"
+                    db.commit()
+                print(f"Ingestion failed: No content extracted for {filename}")
+                return
+                
+            # 2. Embeddings
+            embeddings = await embedding_service.batch_generate_embeddings(chunks)
+            
+            # Ensure chunks table exists
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id SERIAL PRIMARY KEY,
+                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+                    chunk_index INTEGER,
+                    content TEXT,
+                    embedding vector(384)
+                )
+            """))
+            db.commit()
+            
+            # 3. Save chunks with deduplication
+            chunks_saved = 0
+            for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
+                embedding_str = str(embedding)
+                
+                # Check 0.95 similarity (cosine distance < 0.05)
+                duplicate_check_query = text("""
+                    SELECT id FROM document_chunks 
+                    WHERE embedding <=> CAST(:embedding AS vector) < 0.05
+                    LIMIT 1
+                """)
+                duplicate = db.execute(duplicate_check_query, {"embedding": embedding_str}).fetchone()
+                
+                if not duplicate:
+                    insert_query = text("""
+                        INSERT INTO document_chunks (document_id, chunk_index, content, embedding)
+                        VALUES (:doc_id, :idx, :content, CAST(:embedding AS vector))
+                    """)
+                    db.execute(insert_query, {
+                        "doc_id": doc_id,
+                        "idx": i,
+                        "content": chunk_text,
+                        "embedding": embedding_str
+                    })
+                    chunks_saved += 1
+                    
+            # Update parent Document status to complete
+            doc = db.query(Document).filter(Document.id == doc_id).first()
+            if doc:
+                doc.status = "complete"
+                db.commit()
+                
+        except Exception as e:
+            print(f"Error in background ingestion for {filename}: {e}")
+            db.rollback()
+            try:
+                doc = db.query(Document).filter(Document.id == doc_id).first()
+                if doc:
+                    doc.status = "failed"
+                    db.commit()
+            except Exception as db_err:
+                print(f"Failed to update document status to failed: {db_err}")
+        finally:
+            db.close()
+
     async def process_document(self, filename: str, content: str) -> Dict[str, Any]:
         """
         Main pipeline: Check duplicates -> Chunk -> Embed -> Save
-        Designed to be run as a FastAPI BackgroundTask.
         """
         db = SessionLocal()
         try:
