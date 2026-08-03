@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 
 from database import SessionLocal
 from services.embedding_service import embedding_service
+from auth import get_current_user
 
 import os
 from groq import Groq
@@ -35,7 +36,7 @@ class SearchQuery(BaseModel):
     use_ai: bool = True
 
 @router.post("/")
-async def search_documents(request: SearchQuery, db: Session = Depends(get_db)):
+async def search_documents(request: SearchQuery, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """
     Search documents using pgvector cosine similarity and return Groq AI synthesis.
     """

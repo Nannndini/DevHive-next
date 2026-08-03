@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 
 from api.database import SessionLocal
 from api.models import Document
+from api.auth import get_current_user, RoleChecker
 
 router = APIRouter(
     prefix="/documents",
@@ -18,7 +19,7 @@ def get_db():
         db.close()
 
 @router.get("/")
-def get_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), user: Dict[str, Any] = Depends(get_current_user)):
     """List all documents."""
     try:
         docs = db.query(Document).offset(skip).limit(limit).all()
@@ -37,7 +38,7 @@ def get_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=f"Database retrieval failed: {str(e)}")
 
 @router.get("/{doc_id}")
-def get_document(doc_id: str, db: Session = Depends(get_db)):
+def get_document(doc_id: str, db: Session = Depends(get_db), user: Dict[str, Any] = Depends(get_current_user)):
     """Get a specific document by ID."""
     try:
         doc = db.query(Document).filter(Document.id == doc_id).first()
@@ -57,7 +58,7 @@ def get_document(doc_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
 
 @router.delete("/{doc_id}")
-def delete_document(doc_id: str, db: Session = Depends(get_db)):
+def delete_document(doc_id: str, db: Session = Depends(get_db), user: Dict[str, Any] = Depends(RoleChecker(["admin", "manager"]))):
     """Delete a document by ID."""
     try:
         doc = db.query(Document).filter(Document.id == doc_id).first()

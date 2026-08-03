@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from typing import Dict, Any
+from api.auth import RoleChecker
 
 router = APIRouter(
     prefix="/analytics",
@@ -7,7 +8,7 @@ router = APIRouter(
 )
 
 @router.get("/dashboard")
-async def get_neural_analytics() -> Dict[str, Any]:
+async def get_neural_analytics(user: dict = Depends(RoleChecker(["admin", "manager"]))) -> Dict[str, Any]:
     """
     Returns analytics data for the Neural Analytics Dashboard:
     - Query velocity (queries over 30 days)
@@ -46,7 +47,7 @@ async def get_neural_analytics() -> Dict[str, Any]:
     }
 
 @router.get("/overview")
-async def get_system_overview() -> Dict[str, Any]:
+async def get_system_overview(user: dict = Depends(RoleChecker(["admin", "manager"]))) -> Dict[str, Any]:
     """
     Returns data for the System Overview dashboard.
     """

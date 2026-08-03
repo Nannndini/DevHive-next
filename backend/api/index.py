@@ -5,9 +5,11 @@ from database import engine, SessionLocal
 from models import Base
 from routers import analytics, documents, search, auth_router, integrations
 from models import Document
+from services.ingestion_service import ingestion_service
 import io
 import PyPDF2
 from typing import Optional
+from auth import get_current_user
 
 def get_db():
     db = SessionLocal()
@@ -50,7 +52,8 @@ async def root_overview():
 async def ingest_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    is_private: Optional[bool] = Form(False)
+    is_private: Optional[bool] = Form(False),
+    user: dict = Depends(get_current_user)
 ):
     """
     Endpoint for uploading documents. Asynchronous background processing.

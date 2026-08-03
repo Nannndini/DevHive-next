@@ -4,7 +4,9 @@ from sqlalchemy.orm import Session
 from api.database import engine, SessionLocal
 from api.models import Base
 from api.routers import analytics, documents, search, auth_router, integrations
+from api.auth import get_current_user
 from api.models import Document
+from api.services.ingestion_service import ingestion_service
 import io
 import PyPDF2
 from typing import Optional
@@ -49,7 +51,8 @@ async def root_overview():
 async def ingest_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    is_private: Optional[bool] = Form(False)
+    is_private: Optional[bool] = Form(False),
+    user: dict = Depends(get_current_user)
 ):
     """
     Endpoint for uploading documents. Asynchronous background processing.

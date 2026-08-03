@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from api.auth import get_current_user
 
 from api.database import SessionLocal
 from api.services.embedding_service import embedding_service
@@ -35,7 +36,7 @@ class SearchQuery(BaseModel):
     use_ai: bool = True
 
 @router.post("/")
-async def search_documents(request: SearchQuery, db: Session = Depends(get_db)):
+async def search_documents(request: SearchQuery, db: Session = Depends(get_db), user: Dict[str, Any] = Depends(get_current_user)):
     """
     Search documents using pgvector cosine similarity and return Groq AI synthesis.
     """
