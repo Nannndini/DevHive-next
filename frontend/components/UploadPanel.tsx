@@ -38,7 +38,7 @@ export function UploadPanel() {
       
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.detail || "Upload failed")
+        throw new Error(errData.detail || `Upload failed (HTTP ${res.status})`)
       }
       
       const data = await res.json()

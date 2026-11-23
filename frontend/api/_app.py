@@ -44,6 +44,30 @@ for r in (analytics, documents, search, auth_router, integrations):
     app.include_router(r.router, prefix="/api")
 
 
+@app.get("/api/health")
+def health():
+    """Deployment self-check. Reports which settings exist (never their values)."""
+    import os
+    from sqlalchemy import text
+    from api.database import engine
+
+    status = {
+        "JWT_SECRET": bool(os.environ.get("JWT_SECRET")),
+        "DATABASE_URL_or_SUPABASE_PASSWORD": engine is not None,
+        "HUGGINGFACE_API_KEY": bool(os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HF_TOKEN")),
+        "GROQ_API_KEY": bool(os.environ.get("GROQ_API_KEY")),
+        "db": "not configured",
+    }
+    if engine is not None:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            status["db"] = "ok"
+        except Exception as e:
+            status["db"] = f"error: {type(e).__name__}"
+    return status
+
+
 @app.get("/api")
 def root():
     return {"message": "DevHive backend running"}

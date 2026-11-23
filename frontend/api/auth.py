@@ -4,14 +4,15 @@ from fastapi import Request, HTTPException, Depends
 from typing import List, Dict, Any
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
-if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET environment variable is required but not set. Server cannot start.")
 
 JWT_ALGORITHM = "HS256"
 
 
 async def get_current_user(request: Request) -> Dict[str, Any]:
     """Extract and verify JWT from Authorization header or auth-token cookie."""
+    if not JWT_SECRET:
+        raise HTTPException(status_code=500, detail="Server misconfigured: JWT_SECRET is not set")
+
     token = None
 
     # Check Authorization header first

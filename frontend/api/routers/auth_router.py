@@ -10,8 +10,6 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
-if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET environment variable is required but not set.")
 
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
@@ -39,6 +37,8 @@ def _verify_password(password: str, password_hash: str) -> bool:
 
 
 def _create_jwt(email: str, role: str, name: str) -> str:
+    if not JWT_SECRET:
+        raise HTTPException(status_code=500, detail="Server misconfigured: JWT_SECRET is not set")
     now = datetime.now(timezone.utc)
     payload = {
         "email": email, "role": role, "name": name,

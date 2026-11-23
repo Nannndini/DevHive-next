@@ -41,6 +41,7 @@ with engine.begin() as c:
 c = TestClient(app, follow_redirects=False)
 ok = lambda name, cond, extra="": print(("PASS" if cond else "FAIL"), name, extra)
 
+h = c.get("/api/health"); ok("health endpoint", h.status_code == 200 and h.json()["db"] == "ok" and h.json()["JWT_SECRET"], h.text)
 ok("search unauthenticated -> 401", c.post("/api/search", json={"query": "x"}).status_code == 401)
 r = c.post("/api/auth/register", json={"email": "New@Test.com", "password": "password123", "full_name": "Nan"})
 ok("register", r.status_code == 200, r.text[:80]); tok = r.json()["token"]
