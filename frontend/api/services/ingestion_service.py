@@ -1,184 +1,107 @@
-import asyncio
-from typing import List, Dict, Any
-from sqlalchemy.orm import Session
+import logging
+from typing import Any, Dict
+
 from sqlalchemy import text
-from api.services.chunking import chunking_service
-from api.services.embedding_service import embedding_service
-from api.models import Document
+from sqlalchemy.orm import Session
+
 from api.database import SessionLocal
+from api.models import Document
+from api.services.chunking import chunking_service
+from api.services.embedding_service import embedding_service, EmbeddingError
+
+logger = logging.getLogger(__name__)
+
+# cosine distance < 0.05  <=>  similarity > 0.95
+DEDUP_DISTANCE = 0.05
+
 
 class IngestionService:
-    """Core pipeline for processing and ingesting documents with deduplication"""
-    
-    def __init__(self):
-        self.similarity_threshold = 0.95
-        
-    async def _check_duplicate_filename(self, db: Session, filename: str) -> bool:
-        """Check if a file with this exact name already exists in the DB"""
-        # Based on current models.Document containing 'filename'
-        existing = db.query(Document).filter(Document.filename == filename).first()
-        return existing is not None
-        
-    async def process_document_async(self, doc_id: Any, filename: str, content: str) -> None:
-        """
-        Asynchronously chunk, embed, and index document. Updates status to complete or failed.
-        Designed to be run as a FastAPI BackgroundTask.
-        """
-        db = SessionLocal()
-        try:
-            # 1. Chunking
-            chunks = chunking_service.chunk_text(content)
-            if not chunks:
-                doc = db.query(Document).filter(Document.id == doc_id).first()
-                if doc:
-                    doc.status = "failed"
-                    db.commit()
-                print(f"Ingestion failed: No content extracted for {filename}")
-                return
-                
-            # 2. Embeddings
-            embeddings = await embedding_service.batch_generate_embeddings(chunks)
-            
-            # Ensure chunks table exists
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS document_chunks (
-                    id SERIAL PRIMARY KEY,
-                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-                    chunk_index INTEGER,
-                    content TEXT,
-                    embedding vector(384)
-                )
-            """))
-            db.commit()
-            
-            # 3. Save chunks with deduplication
-            chunks_saved = 0
-            for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
-                embedding_str = str(embedding)
-                
-                # Check 0.95 similarity (cosine distance < 0.05)
-                duplicate_check_query = text("""
-                    SELECT id FROM document_chunks 
-                    WHERE embedding <=> CAST(:embedding AS vector) < 0.05
-                    LIMIT 1
-                """)
-                duplicate = db.execute(duplicate_check_query, {"embedding": embedding_str}).fetchone()
-                
-                if not duplicate:
-                    insert_query = text("""
-                        INSERT INTO document_chunks (document_id, chunk_index, content, embedding)
-                        VALUES (:doc_id, :idx, :content, CAST(:embedding AS vector))
-                    """)
-                    db.execute(insert_query, {
-                        "doc_id": doc_id,
-                        "idx": i,
-                        "content": chunk_text,
-                        "embedding": embedding_str
-                    })
-                    chunks_saved += 1
-                    
-            # Update parent Document status to complete
-            doc = db.query(Document).filter(Document.id == doc_id).first()
-            if doc:
-                doc.status = "complete"
-                db.commit()
-                
-        except Exception as e:
-            print(f"Error in background ingestion for {filename}: {e}")
-            db.rollback()
-            try:
-                doc = db.query(Document).filter(Document.id == doc_id).first()
-                if doc:
-                    doc.status = "failed"
-                    db.commit()
-            except Exception as db_err:
-                print(f"Failed to update document status to failed: {db_err}")
-        finally:
-            db.close()
+    """Chunk -> embed -> semantic dedup (0.95) -> store in pgvector."""
 
-    async def process_document(self, filename: str, content: str) -> Dict[str, Any]:
-        """
-        Main pipeline: Check duplicates -> Chunk -> Embed -> Save
-        """
+    async def _check_duplicate_filename(self, db: Session, filename: str) -> bool:
+        return db.query(Document).filter(Document.filename == filename).first() is not None
+
+    def create_document(self, db: Session, filename: str, content: str) -> Document:
+        file_type = "pdf" if filename.lower().endswith(".pdf") else "txt"
+        doc = Document(
+            title=filename, filename=filename, file_type=file_type,
+            content=content, status="processing",
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+        return doc
+
+    async def process_document_async(self, doc_id: Any, filename: str, content: str) -> Dict[str, Any]:
+        """Index an existing Document row. Always leaves status as 'complete' or 'failed'."""
         db = SessionLocal()
         try:
-            # 1. Exact Filename Deduplication Check
-            if await self._check_duplicate_filename(db, filename):
-                return {"status": "skipped", "reason": "exact_duplicate", "filename": filename}
-                
-            # 2. Chunking
             chunks = chunking_service.chunk_text(content)
             if not chunks:
+                self._set_status(db, doc_id, "failed")
                 return {"status": "error", "reason": "no_content_extracted", "filename": filename}
-                
-            # 3. Generate Embeddings for chunks
+
             embeddings = await embedding_service.batch_generate_embeddings(chunks)
-            
-            # 4. Save parent Document to Database
-            file_type = "pdf" if filename.lower().endswith(".pdf") else "txt"
-            new_doc = Document(title=filename, filename=filename, file_type=file_type, content=content)
-            db.add(new_doc)
-            db.commit()
-            db.refresh(new_doc)
-            
-            # Ensure chunks table exists for pgvector
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS document_chunks (
-                    id SERIAL PRIMARY KEY,
-                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-                    chunk_index INTEGER,
-                    content TEXT,
-                    embedding vector(384) -- BAAI/bge-small-en-v1.5 outputs 384d
+
+            saved = 0
+            for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+                emb_str = str(emb)
+                dup = db.execute(
+                    text("SELECT id FROM document_chunks "
+                         "WHERE embedding <=> CAST(:e AS vector) < :d LIMIT 1"),
+                    {"e": emb_str, "d": DEDUP_DISTANCE},
+                ).fetchone()
+                if dup:
+                    continue
+                db.execute(
+                    text("INSERT INTO document_chunks (document_id, chunk_index, content, embedding) "
+                         "VALUES (:doc, :idx, :content, CAST(:e AS vector))"),
+                    {"doc": doc_id, "idx": i, "content": chunk, "e": emb_str},
                 )
-            """))
+                saved += 1
             db.commit()
-            
-            # 5. Semantic Deduplication & Saving Chunks
-            chunks_saved = 0
-            for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
-                # Convert embedding list to pgvector formatted string "[0.1, 0.2, ...]"
-                embedding_str = str(embedding)
-                
-                # Check 0.95 cosine similarity deduplication
-                # cosine distance (<=>) ranges from 0 (perfect match) to 2 (perfect opposite)
-                # similarity = 1 - distance. So similarity > 0.95 is distance < 0.05
-                duplicate_check_query = text("""
-                    SELECT id FROM document_chunks 
-                    WHERE embedding <=> CAST(:embedding AS vector) < 0.05
-                    LIMIT 1
-                """)
-                
-                duplicate = db.execute(duplicate_check_query, {"embedding": embedding_str}).fetchone()
-                
-                if not duplicate:
-                    # Save unique chunk
-                    insert_query = text("""
-                        INSERT INTO document_chunks (document_id, chunk_index, content, embedding)
-                        VALUES (:doc_id, :idx, :content, CAST(:embedding AS vector))
-                    """)
-                    db.execute(insert_query, {
-                        "doc_id": new_doc.id,
-                        "idx": i,
-                        "content": chunk_text,
-                        "embedding": embedding_str
-                    })
-                    chunks_saved += 1
-                    
-            db.commit()
-            
+
+            self._set_status(db, doc_id, "complete")
             return {
-                "status": "success", 
-                "document_id": new_doc.id, 
-                "chunks_processed": len(chunks),
-                "chunks_saved": chunks_saved,
-                "duplicates_skipped": len(chunks) - chunks_saved
+                "status": "success", "document_id": str(doc_id),
+                "chunks_processed": len(chunks), "chunks_saved": saved,
+                "duplicates_skipped": len(chunks) - saved,
             }
-            
-        except Exception as e:
-            print(f"Error processing document {filename}: {e}")
+        except EmbeddingError as e:
+            logger.error("Embedding failed for %s: %s", filename, e)
             db.rollback()
+            self._set_status(db, doc_id, "failed")
+            return {"status": "error", "error_type": "embedding", "reason": str(e), "filename": filename}
+        except Exception as e:
+            logger.exception("Ingestion failed for %s", filename)
+            db.rollback()
+            self._set_status(db, doc_id, "failed")
             return {"status": "error", "reason": str(e), "filename": filename}
         finally:
             db.close()
+
+    @staticmethod
+    def _set_status(db: Session, doc_id: Any, status: str) -> None:
+        try:
+            doc = db.query(Document).filter(Document.id == doc_id).first()
+            if doc:
+                doc.status = status
+                db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Could not set status=%s for %s", status, doc_id)
+
+    async def process_document(self, filename: str, content: str) -> Dict[str, Any]:
+        """Create the row and index it (used by the Notion/GitHub sync)."""
+        db = SessionLocal()
+        try:
+            if await self._check_duplicate_filename(db, filename):
+                return {"status": "skipped", "reason": "exact_duplicate", "filename": filename}
+            doc = self.create_document(db, filename, content)
+            doc_id = doc.id
+        finally:
+            db.close()
+        return await self.process_document_async(doc_id, filename, content)
+
 
 ingestion_service = IngestionService()

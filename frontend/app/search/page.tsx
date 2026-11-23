@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export default function Search() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<{ id: string; text: string; similarity: number }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -17,7 +17,7 @@ export default function Search() {
         body: JSON.stringify({ query }),
       });
       const data = await res.json();
-      setResults(data.results || []);
+      setResults(data.chunks || []);
     } catch (err) {
       console.error(err);
     }
@@ -41,10 +41,10 @@ export default function Search() {
         </button>
       </form>
       <div className="space-y-4">
-        {results.map((res: any, idx) => (
+        {results.map((res, idx) => (
           <div key={idx} className="border border-cyan-900 p-4">
-            <p className="text-white">{res.content}</p>
-            <p className="text-xs text-cyan-600 mt-2">Similarity: {res.score}</p>
+            <p className="text-white">{res.text}</p>
+            <p className="text-xs text-cyan-600 mt-2">Similarity: {Number(res.similarity).toFixed(3)}</p>
           </div>
         ))}
       </div>

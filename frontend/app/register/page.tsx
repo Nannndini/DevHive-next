@@ -21,9 +21,9 @@ export default function Register() {
       const data = await res.json();
       
       if (res.ok) {
-        document.cookie = `token=${data.token}; path=/`;
-        document.cookie = `role=${data.user.role}; path=/`;
-        router.push("/");
+        document.cookie = `auth-token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `role=${data.user.role}; path=/; max-age=86400; SameSite=Lax`;
+        window.location.href = "/";
       } else {
         setError(data.detail || "Registration failed");
       }

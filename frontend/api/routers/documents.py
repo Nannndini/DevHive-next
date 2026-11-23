@@ -18,7 +18,7 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/")
+@router.get("")
 def get_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), user: Dict[str, Any] = Depends(get_current_user)):
     """List all documents."""
     try:

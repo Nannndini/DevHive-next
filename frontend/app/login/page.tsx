@@ -15,39 +15,38 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        signal: controller.signal
+        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
-      
-      const data = await res.json();
-      
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        document.cookie = `auth-token=${data.token}; path=/`;
-        document.cookie = `role=${data?.user?.role || 'admin'}; path=/`;
-        router.push("/");
+        const maxAge = 60 * 60 * 24; // matches the 24h JWT expiry
+        document.cookie = `auth-token=${data.token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        document.cookie = `role=${data?.user?.role ?? "employee"}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        window.location.href = "/";
       } else {
         setError(data.detail || "Login failed");
-        setIsLoading(false);
       }
-    } catch (err: any) {
-      // Fallback for Vercel deployments where backend isn't reachable
-      console.warn("Backend unreachable, falling back to local mock authentication!");
-      document.cookie = `auth-token=mock-fallback-token; path=/`;
-      
-      // Determine role based on email input for testing
-      let mockRole = 'employee';
-      if (email.includes('admin')) mockRole = 'admin';
-      if (email.includes('manager')) mockRole = 'manager';
-      
-      document.cookie = `role=${mockRole}; path=/`;
-      
+    } catch (err) {
+      // Never fake a login: a placeholder token is rejected by the API anyway
+      // and just hides the real failure.
+      setError(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "Login timed out. Please try again."
+          : "Cannot reach the server. Please try again."
+      );
+    } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
-      window.location.href = "/";
     }
   };
 

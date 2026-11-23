@@ -11,14 +11,20 @@ export default function Ask() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(`/api/ask`, {
+      const res = await fetch(`/api/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ query: question, top_k: 5, use_ai: true }),
       });
-      const data = await res.json();
-      setAnswer(data.answer || "No response generated.");
-    } catch (err) {
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setAnswer("Session expired. Please log in again.");
+      } else if (!res.ok) {
+        setAnswer(data.detail || "Request failed.");
+      } else {
+        setAnswer(data.ai_answer || "No relevant documents found for that question.");
+      }
+    } catch {
       setAnswer("Failed to connect to the generative core.");
     }
     setLoading(false);

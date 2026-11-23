@@ -1,4 +1,10 @@
-from api.index import app
+"""Local dev shim: runs the exact same app Vercel deploys (frontend/api/_app.py).
 
-# This file exists solely to maintain backward compatibility for local development.
-# You can continue to run `uvicorn main:app --reload` as usual.
+    cd backend && uvicorn main:app --reload --port 8000
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "frontend"))
+
+from api._app import app  # noqa: E402,F401

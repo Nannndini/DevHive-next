@@ -1,7 +1,9 @@
 import os
 import asyncio
+import logging
 from typing import List
-import requests
+
+import httpx
 
 try:
     from dotenv import load_dotenv
@@ -9,75 +11,77 @@ try:
 except ImportError:
     pass
 
+logger = logging.getLogger(__name__)
+
+EMBEDDING_DIM = 384  # BAAI/bge-small-en-v1.5
+
+
+class EmbeddingError(RuntimeError):
+    """Raised when embeddings cannot be generated. Never swallowed into fake vectors."""
+
+
 class EmbeddingService:
-    """Service for generating vector embeddings using HuggingFace API (Groq API does not support embeddings)"""
-    
+    """Embeddings via the Hugging Face Inference router (api-inference.huggingface.co is retired)."""
+
     def __init__(self):
-        self.hf_key = os.environ.get("HUGGINGFACE_API_KEY")
         self.model_name = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
-        self.api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{self.model_name}"
-        
-        self.headers = {"Authorization": f"Bearer {self.hf_key}"} if self.hf_key else {}
+        self.api_url = (
+            "https://router.huggingface.co/hf-inference/models/"
+            f"{self.model_name}/pipeline/feature-extraction"
+        )
+
+    @property
+    def _headers(self) -> dict:
+        key = os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HF_TOKEN")
+        if not key:
+            raise EmbeddingError("HUGGINGFACE_API_KEY is not set")
+        return {"Authorization": f"Bearer {key}"}
+
+    async def _post(self, client: httpx.AsyncClient, inputs) -> list:
+        last = "unknown error"
+        for attempt in range(3):
+            try:
+                resp = await client.post(
+                    self.api_url,
+                    headers=self._headers,
+                    json={"inputs": inputs, "options": {"wait_for_model": True}},
+                )
+            except httpx.HTTPError as e:
+                last = f"network error: {e}"
+            else:
+                if resp.status_code == 200:
+                    return resp.json()
+                last = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                if resp.status_code not in (429, 500, 502, 503, 504):
+                    break  # 401/403/404 etc. will not fix themselves
+            await asyncio.sleep(2 ** attempt)
+        raise EmbeddingError(f"Hugging Face embedding request failed ({last})")
+
+    @staticmethod
+    def _validate(vec) -> List[float]:
+        if not (isinstance(vec, list) and len(vec) == EMBEDDING_DIM and isinstance(vec[0], (int, float))):
+            raise EmbeddingError(f"Unexpected embedding shape (expected {EMBEDDING_DIM} floats)")
+        if not any(vec):
+            raise EmbeddingError("Received an all-zero embedding")
+        return vec
 
     async def generate_embedding(self, text: str) -> List[float]:
-        """Generate an embedding for a piece of text using HF API with retries"""
-        if not self.hf_key:
-            return [0.0] * 384
-            
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                response = requests.post(self.api_url, headers=self.headers, json={"inputs": text})
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list):
-                        return result[0]
-                    return result
-                elif response.status_code in [503, 429] and attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                else:
-                    if attempt == max_retries - 1:
-                        return [0.0] * 384
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    return [0.0] * 384
-                await asyncio.sleep(2 ** attempt)
+        async with httpx.AsyncClient(timeout=30) as client:
+            result = await self._post(client, text)
+        if isinstance(result, list) and result and isinstance(result[0], list):
+            result = result[0]
+        return self._validate(result)
 
     async def batch_generate_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for a list of text chunks"""
-        if not self.hf_key:
-            return [[0.0] * 384 for _ in texts]
-            
-        embeddings = []
-        chunk_size = 10
-        
-        for i in range(0, len(texts), chunk_size):
-            batch = texts[i:i + chunk_size]
-            max_retries = 3
-            
-            for attempt in range(max_retries):
-                try:
-                    response = requests.post(self.api_url, headers=self.headers, json={"inputs": batch})
-                    if response.status_code == 200:
-                        batch_result = response.json()
-                        embeddings.extend(batch_result)
-                        break
-                    elif response.status_code in [503, 429] and attempt < max_retries - 1:
-                        await asyncio.sleep(2 ** attempt)
-                        continue
-                    else:
-                        if attempt == max_retries - 1:
-                            embeddings.extend([[0.0] * 384 for _ in batch])
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        embeddings.extend([[0.0] * 384 for _ in batch])
-                    await asyncio.sleep(2 ** attempt)
-                    
-            if i + chunk_size < len(texts):
-                await asyncio.sleep(0.5)
+        out: List[List[float]] = []
+        async with httpx.AsyncClient(timeout=60) as client:
+            for i in range(0, len(texts), 10):
+                batch = texts[i:i + 10]
+                result = await self._post(client, batch)
+                if not (isinstance(result, list) and len(result) == len(batch)):
+                    raise EmbeddingError("Embedding batch size mismatch")
+                out.extend(self._validate(v) for v in result)
+        return out
 
-        return embeddings
 
-# Singleton instance
 embedding_service = EmbeddingService()
